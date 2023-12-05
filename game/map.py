@@ -1,5 +1,6 @@
 from node import Node
 from connect import Connect
+from card import Cards
 
 
 class Map():
@@ -15,7 +16,7 @@ class Map():
         self.map_h = len(node_pos)
         self.map_w = len(node_pos[0])
 
-        # line, column, sttn
+        # line, column, sttn, dist
         idx = 0
         self.nodes_position = {}
         for idx_line, line in enumerate(node_pos):
@@ -25,9 +26,40 @@ class Map():
                     self.nodes[idx].set_pos(idx_line, idx_column)
                     self.nodes[idx].set_sttn(int(node))
                     self.nodes_position[(idx_line, idx_column)] = idx
+
+                    if idx_line <= 2:
+                        if idx_column == 0 and idx_line == 0:
+                            self.nodes[idx].set_dst(0)
+                        elif idx_column <= 2:
+                            self.nodes[idx].set_dst(1)
+                        elif idx_column <= 6:
+                            self.nodes[idx].set_dst(2)
+                        elif idx_column == 9 and idx_line == 0:
+                            self.nodes[idx].set_dst(4)
+                        else:
+                            self.nodes[idx].set_dst(3)
+                    elif idx_line <= 6:
+                        if idx_column <= 2:
+                            self.nodes[idx].set_dst(5)
+                        elif idx_column <= 6:
+                            self.nodes[idx].set_dst(6)
+                        else:
+                            self.nodes[idx].set_dst(7)
+                    else:
+                        if idx_column == 0 and idx_line == 9:
+                            self.nodes[idx].set_dst(8)
+                        elif idx_column <= 2:
+                            self.nodes[idx].set_dst(9)
+                        elif idx_column <= 6:
+                            self.nodes[idx].set_dst(10)
+                        elif idx_column == 9 and idx_line == 9:
+                            self.nodes[idx].set_dst(12)
+                        else:
+                            self.nodes[idx].set_dst(11)
+
                     idx += 1
 
-        # adjacent
+        # adjacent, connect
         directions = [(-1, 1), (0, 1), (1, 1), (1, 0)]
         for idx in range(len(self.nodes)):
             begin_pos = self.nodes[idx].pos
@@ -46,9 +78,49 @@ class Map():
                         current_pos[0] += direction[0]
                         current_pos[1] += direction[1]
 
+        # cross river?
+        river = [
+            [[3.5, -0.1], [3.5, 2.1]],
+            [[3.4, 1.9], [5.26, 3.76]],
+            [[5.25, 3.74], [5.25, 5.1]],
+            [[5.26, 4.99], [4.4, 6.1]],
+            [[4.5, 5.9], [4.5, 9.1]],
+        ]
+        for connect in self.connects:
+            for pos1, pos2 in river:
+                if connect.is_intersect(pos1=pos1, pos2=pos2):
+                    connect.set_cross_river()
+                    break
+
+        # is tourist
+        for idx in [9, 16, 19, 36, 49]:
+            self.nodes[idx].set_is_trt()
+
+        # color
+        self.nodes[13].set_color(0)
+        self.nodes[29].set_color(1)
+        self.nodes[21].set_color(2)
+        self.nodes[40].set_color(3)
+
+        # cards
+        self.cards = Cards()
+
+        # Todo: goals
+
+        # Todo: pencil ability
+
+    @staticmethod
+    def connect_search(connnect_list, idx1, idx2):
+        for idx, connect in enumerate(connnect_list):
+            if connect.endpoint[0].id == min(idx1, idx2) and connect.endpoint[1].id == max(idx1, idx2):
+                return idx
+        return -1
+
 
 if __name__ == "__main__":
     tmp = Map()
-    print(tmp.nodes[25].info)
-    print(tmp.nodes_position)
-    print(len(tmp.connects))
+    print(tmp.nodes[40].info)
+    print(tmp.connects[69].info)
+    print(tmp.connects[83].info)
+    print(tmp.connect_search(tmp.connects, 26, 35))
+    print(tmp.connects[84].is_intersect(tmp.connects[69]))
