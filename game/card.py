@@ -38,10 +38,10 @@ class Cards():
         self.order = order
 
     def draw(self):
-        idx = self.order.pop()
+        idx = self.order.pop(0)
         if idx == 0:
             idx = self.order.pop()
-            self.cards[idx].set_is_mid()
+            self.cards[idx].set_is_mid(0)
         self.end_num += int(self.cards[idx].is_red)
         return self.cards[idx]
 
