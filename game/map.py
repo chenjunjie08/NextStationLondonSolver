@@ -1,9 +1,11 @@
 from node import Node
 from connect import Connect
 from card import Cards
+from config import Config
 
 
 class Map():
+    # Init the map, mainly some fixed setting.
     def __init__(self):
         self.nodes = {}
         self.connects = []
@@ -80,11 +82,11 @@ class Map():
 
         # cross river?
         river = [
-            [[3.5, -0.1], [3.5, 2.1]],
-            [[3.4, 1.9], [5.26, 3.76]],
-            [[5.25, 3.74], [5.25, 5.1]],
-            [[5.26, 4.99], [4.4, 6.1]],
-            [[4.5, 5.9], [4.5, 9.1]],
+            [[3.50, -0.1], [3.50, 2.10]],
+            [[3.40, 1.90], [5.26, 3.76]],
+            [[5.25, 3.74], [5.25, 5.10]],
+            [[5.26, 4.99], [4.40, 6.10]],
+            [[4.50, 5.90], [4.50, 9.10]],
         ]
         for connect in self.connects:
             for pos1, pos2 in river:
@@ -109,12 +111,31 @@ class Map():
 
         # Todo: pencil ability
 
+        # game config
+        self.config = Config()
+
     @staticmethod
     def connect_search(connnect_list, idx1, idx2):
         for idx, connect in enumerate(connnect_list):
             if connect.endpoint[0].id == min(idx1, idx2) and connect.endpoint[1].id == max(idx1, idx2):
                 return idx
         return -1
+
+    def game_config(self, config):
+        self.config = Config(config)
+
+    def new_game(self):
+        # init game, but store config
+        config_tmp = self.config
+        self.__init__()
+        self.config = config_tmp
+
+        # init score
+        self.total_score = 0
+        self.round_score = [0, 0, 0, 0]
+
+        # init round
+        self.round = 0
 
 
 if __name__ == "__main__":
