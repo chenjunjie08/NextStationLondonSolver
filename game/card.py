@@ -27,8 +27,8 @@ class Cards():
 
         self.cards = {}
         idx = 1
-        for is_red in [True, False]:
-            for sttn in range(1, 6):
+        for is_red in [False, True]:
+            for sttn in [5, 1, 2, 3, 4]:
                 self.cards[idx] = Card(sttn, is_red)
                 idx += 1
 
