@@ -141,6 +141,11 @@ class Game():
         # init round
         round = -1
 
+        # init color
+        if mode == 'random':
+            colors = [0, 1, 2, 3]
+            random.shuffle(colors)
+
         # init score
         total_score = 0
         river_score = np.array([0, 0, 0, 0])
@@ -158,6 +163,8 @@ class Game():
             # color used in this round
             if mode == 'step':
                 color = safe_input(f'color of round {round+1} is: ')
+            elif mode == 'random':
+                color = colors[round]
 
             # init heads, nodes, and connects
             heads = [self.nodes_head[color]]
@@ -168,6 +175,9 @@ class Game():
             # init new cards
             cards = Cards()
             card_used = []
+            if mode == 'random':
+                card_orders = [_ for _ in range(11)]
+                random.shuffle(card_orders)
 
             # init dst
             dsts = np.array([0 for _ in range(13)])
@@ -184,9 +194,15 @@ class Game():
                     card = cards.cards[card_idx]
                     cards.end_num += int(card.is_red)
 
-                else:
-                    # TODO: random and fix game
-                    pass
+                elif mode == 'random':
+                    card_idx = card_orders.pop(0)
+                    card_used.append(card_idx)
+                    if card_idx == 0:
+                        card_idx = card_orders.pop(0)
+                        card_used.append(card_idx)
+                        cards.cards[card_idx].set_is_mid()
+                    card = cards.cards[card_idx]
+                    cards.end_num += int(card.is_red)
 
                 # possible move
                 if card.is_mid:
@@ -198,7 +214,9 @@ class Game():
                 while True:
                     if auto_play:
                         action = self.random_act(possible_move)
-                        print(f"AI: I choose {action}")
+                        print(
+                            f"AI: Card is {'0-' if card.is_mid else ''}{card_idx}. I choose {action}. "
+                        )
                     else:
                         action = input("Your action: ")
 
@@ -287,12 +305,12 @@ class Game():
                     total_score = river_score.sum() * 2 + dst_score.sum() + \
                         trt_score[0] + \
                         (inter_score * np.array([2, 5, 9])).sum()
-                    print(f"Current score is {total_score}\n")
+                    # print(f"Current score is {total_score}\n")
 
                     break
 
         # Game over
-        print(f"Game end! Your score is {total_score}.")
+        print(f"\nGame end! Your score is {total_score}.")
 
     def possible_move(self, heads, nodes, sttn):
         move = {}
@@ -356,7 +374,7 @@ class Game():
 
 if __name__ == "__main__":
     tmp = Game()
-    tmp.new_game(auto_play=False)
+    tmp.new_game(mode='random', auto_play=True)
     # print(tmp.nodes[40].info)
     # print(tmp.connects[69].info)
     # print(tmp.connects[83].info)
