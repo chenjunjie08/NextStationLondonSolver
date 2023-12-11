@@ -169,9 +169,9 @@ class Game():
 
             # init new cards
             cards = Cards()
+            card_used = []
 
             while cards.end_num <= 4:
-                card_used = []
                 if mode == 'step':
                     card_idx = safe_input('Flipped card is: ')
                     card_used.append(card_idx)
@@ -202,7 +202,7 @@ class Game():
 
                     if action in ['show', 's']:
                         self.show(round, color, card, card_used,
-                                  possible_move, nodes, connects)
+                                  possible_move, nodes, connects, total_score)
                         continue
                     if action in ['pass', 'p']:
                         break
@@ -292,7 +292,7 @@ class Game():
         end = random.choice(possible_move[begin])
         return f"{begin}-{end}"
 
-    def show(self, round, color, card, card_used, move, nodes, connects):
+    def show(self, round, color, card, card_used, move, nodes, connects, score):
         print()
         print("### current info ###")
         print(f"Round: {round+1}")
@@ -307,15 +307,15 @@ class Game():
             for key, values in move.items():
                 print(
                     f"- {key} to {','.join([str(value) for value in values])}")
-        print(f"used cards: {card_used[:-1]}")
-        print(f"score: {self.total_score}")
+        print(f"used cards: {','.join([str(_) for _ in card_used[:-1]])}")
+        print(f"score: {score}")
 
         print()
 
 
 if __name__ == "__main__":
     tmp = Game()
-    tmp.new_game(auto_play=True)
+    tmp.new_game(auto_play=False)
     # print(tmp.nodes[40].info)
     # print(tmp.connects[69].info)
     # print(tmp.connects[83].info)
