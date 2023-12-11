@@ -141,23 +141,20 @@ class Game():
         self.__init__()
         self.config = config_tmp
 
+        # init round
+        round = -1
+
         # init score
         total_score = 0
         round_score = [0, 0, 0, 0]
         inter_score = [0, 0, 0]
         goals_score = [0, 0]
 
-        # init round
-        round = 0
-
-        # init color
-        color = None
-
         print("Game Start!\n")
 
-        print("### Round 1 ###")
-
-        while round <= 3:
+        while round < 3:
+            round += 1
+            print(f"### Round {round+1} ###")
 
             if mode == 'step':
                 color = safe_input(f'color of round {round+1} is: ')
@@ -251,9 +248,6 @@ class Game():
 
                     break
 
-            # next round
-            round += 1
-
         # Game over
         print(f"Game end! Your score is {total_score}.")
 
@@ -315,7 +309,7 @@ class Game():
 
 if __name__ == "__main__":
     tmp = Game()
-    tmp.new_game(auto_play=False)
+    tmp.new_game(auto_play=True)
     # print(tmp.nodes[40].info)
     # print(tmp.connects[69].info)
     # print(tmp.connects[83].info)
