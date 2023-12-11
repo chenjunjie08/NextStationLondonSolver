@@ -2,6 +2,7 @@ from node import Node
 from connect import Connect
 from card import Cards
 from config import Config
+import numpy as np
 import random
 
 
@@ -110,10 +111,6 @@ class Game():
             self.nodes[idx].set_is_trt()
 
         # color
-        self.nodes[13].set_color(0)
-        self.nodes[29].set_color(1)
-        self.nodes[21].set_color(2)
-        self.nodes[40].set_color(3)
         self.nodes_head = [13, 29, 21, 40]
 
         # TODO: goals
@@ -146,9 +143,11 @@ class Game():
 
         # init score
         total_score = 0
-        round_score = [0, 0, 0, 0]
-        inter_score = [0, 0, 0]
-        goals_score = [0, 0]
+        river_score = np.array([0, 0, 0, 0])
+        dst_score = np.array([0, 0, 0, 0])
+        inter_score = np.array([0, 0, 0])
+        trt_score = np.array([0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25])
+        goals_score = np.array([0, 0])
 
         print("Game Start!\n")
 
@@ -156,6 +155,7 @@ class Game():
             round += 1
             print(f"### Round {round+1} ###")
 
+            # color used in this round
             if mode == 'step':
                 color = safe_input(f'color of round {round+1} is: ')
 
@@ -163,10 +163,15 @@ class Game():
             heads = [self.nodes_head[color]]
             nodes = [self.nodes_head[color]]
             connects = []
+            self.nodes[self.nodes_head[color]].set_color(color)
 
             # init new cards
             cards = Cards()
             card_used = []
+
+            # init dst
+            dsts = np.array([0 for _ in range(13)])
+            dsts[self.nodes[self.nodes_head[color]].dst] += 1
 
             while cards.end_num <= 4:
                 if mode == 'step':
@@ -193,7 +198,7 @@ class Game():
                 while True:
                     if auto_play:
                         action = self.random_act(possible_move)
-                        print(f"AI: I choose {action}\n")
+                        print(f"AI: I choose {action}")
                     else:
                         action = input("Your action: ")
 
@@ -232,11 +237,44 @@ class Game():
 
                     # modify nodes
                     nodes.append(end)
+
+                    dsts[self.nodes[end].dst] += 1
+                    dst_score[round] = self.score_dst(dsts)
+
+                    if self.nodes[end].is_trt:
+                        if len(trt_score) > 1:
+                            trt_score = trt_score[1:]
+
                     self.nodes[end].set_color(color)
+                    if sum(self.nodes[end].color) < 2:
+                        pass
+                    elif sum(self.nodes[end].color) == 2:
+                        inter_score[0] += 1
+                    elif sum(self.nodes[end].color) == 3:
+                        inter_score[0] -= 1
+                        inter_score[1] += 1
+                    elif sum(self.nodes[end].color) == 4:
+                        inter_score[1] -= 1
+                        inter_score[2] += 1
+
+                    if len(nodes) == 2:
+                        if sum(self.nodes[begin].color) < 2:
+                            pass
+                        elif sum(self.nodes[begin].color) == 2:
+                            inter_score[0] += 1
+                        elif sum(self.nodes[begin].color) == 3:
+                            inter_score[0] -= 1
+                            inter_score[1] += 1
+                        elif sum(self.nodes[begin].color) == 4:
+                            inter_score[1] -= 1
+                            inter_score[2] += 1
 
                     # modify connects
                     connect_id = self.connect_search(self.connects, begin, end)
                     connects.append(connect_id)
+                    if self.connects[connect_id].is_cross_river:
+                        river_score[round] += 1
+
                     self.connects[connect_id].set_unavailable()
                     for idx in range(len(self.connects)):
                         if idx == connect_id:
@@ -245,6 +283,11 @@ class Game():
                             continue
                         if self.connects[connect_id].is_intersect(self.connects[idx]):
                             self.connects[idx].set_unavailable()
+
+                    total_score = river_score.sum() * 2 + dst_score.sum() + \
+                        trt_score[0] + \
+                        (inter_score * np.array([2, 5, 9])).sum()
+                    print(f"Current score is {total_score}\n")
 
                     break
 
@@ -286,6 +329,10 @@ class Game():
         end = random.choice(possible_move[begin])
         return f"{begin}-{end}"
 
+    @staticmethod
+    def score_dst(dsts):
+        return dsts.max() * (dsts > 0).astype(int).sum()
+
     def show(self, round, color, card, card_used, move, nodes, connects, score):
         print()
         print("### current info ###")
@@ -309,9 +356,9 @@ class Game():
 
 if __name__ == "__main__":
     tmp = Game()
-    tmp.new_game(auto_play=True)
+    tmp.new_game(auto_play=False)
     # print(tmp.nodes[40].info)
     # print(tmp.connects[69].info)
     # print(tmp.connects[83].info)
     # print(tmp.connect_search(tmp.connects, 26, 35))
-    # print(tmp.connects[84].is_intersect(tmp.connects[69]))\
+    # print(tmp.connects[84].is_intersect(tmp.connects[69]))
