@@ -1,7 +1,6 @@
 from node import Node
 from connect import Connect
 from card import Cards
-from config import Config
 import numpy as np
 import random
 
@@ -113,12 +112,7 @@ class Game():
         # color
         self.nodes_head = [13, 29, 21, 40]
 
-        # TODO: goals
-
         # TODO: pencil ability
-
-        # game config
-        self.config = Config()
 
     @staticmethod
     def connect_search(connnect_list, idx1, idx2):
@@ -127,16 +121,11 @@ class Game():
                 return idx
         return -1
 
-    def game_config(self, config):
-        self.config = Config(config)
-
     def new_game(self, mode='step', auto_play=False):
         assert mode in ['random', 'fix', 'step']
 
-        # init game, but store config
-        config_tmp = self.config
+        # init game
         self.__init__()
-        self.config = config_tmp
 
         # init round
         round = -1
@@ -152,9 +141,21 @@ class Game():
         dst_score = np.array([0, 0, 0, 0])
         inter_score = np.array([0, 0, 0])
         trt_score = np.array([0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25])
-        goals_score = np.array([0, 0])
+        goals_score = np.array([0, 0, 0, 0, 0])
+        goals_used = np.array([0, 0, 0, 0, 0])
+
+        # init goal-related var
+        dsts_total = np.array([0 for _ in range(13)])
+        trts_total = [9, 16, 19, 36, 49]
+        cntr_total = [18, 19, 20, 25, 26, 30, 32, 33, 34]
 
         print("Game Start!\n")
+        if mode == 'step':
+            goals = input("Goals of this game: ").split(",")
+            for goal in goals:
+                goals_used[int(goal)] = 1
+        elif mode == 'random':
+            goals_used[np.random.choice([0, 1, 2, 3, 4], 2, False)] = 1
 
         while round < 3:
             round += 1
@@ -258,10 +259,32 @@ class Game():
 
                     dsts[self.nodes[end].dst] += 1
                     dst_score[round] = self.score_dst(dsts)
+                    # goal 1
+                    if goals_score[1] == 0:
+                        dsts_total[self.nodes[end].dst] = 1
+                        if dsts_total.sum() == 13:
+                            goals_score[1] == 1
 
                     if self.nodes[end].is_trt:
                         if len(trt_score) > 1:
                             trt_score = trt_score[1:]
+                        # goal 2
+                        if goals_score[2] == 0:
+                            for idx, val in enumerate(trts_total):
+                                if self.nodes[end].id == val:
+                                    trts_total.pop(idx)
+                                    break
+                            if len(trts_total) == 0:
+                                goals_score[2] = 1
+
+                    # goal 3
+                    if goals_score[3] == 0:
+                        for idx, val in enumerate(cntr_total):
+                            if self.nodes[end].id == val:
+                                cntr_total.pop(idx)
+                                break
+                        if len(cntr_total) == 0:
+                            goals_score[3] = 1
 
                     self.nodes[end].set_color(color)
                     if sum(self.nodes[end].color) < 2:
@@ -287,11 +310,18 @@ class Game():
                             inter_score[1] -= 1
                             inter_score[2] += 1
 
+                    # goal 0
+                    if goals_score[0] == 0 and inter_score.sum() >= 8:
+                        goals_score[0] = 1
+
                     # modify connects
                     connect_id = self.connect_search(self.connects, begin, end)
                     connects.append(connect_id)
                     if self.connects[connect_id].is_cross_river:
                         river_score[round] += 1
+                    # goal 4
+                    if goals_score[4] == 0 and river_score.sum() >= 6:
+                        goals_score[4] = 1
 
                     self.connects[connect_id].set_unavailable()
                     for idx in range(len(self.connects)):
@@ -302,15 +332,23 @@ class Game():
                         if self.connects[connect_id].is_intersect(self.connects[idx]):
                             self.connects[idx].set_unavailable()
 
-                    total_score = river_score.sum() * 2 + dst_score.sum() + \
+                    total_score = \
+                        river_score.sum() * 2 + \
+                        dst_score.sum() + \
                         trt_score[0] + \
-                        (inter_score * np.array([2, 5, 9])).sum()
+                        (inter_score * np.array([2, 5, 9])).sum() + \
+                        (goals_score*goals_used).sum()*10
                     # print(f"Current score is {total_score}\n")
 
                     break
 
         # Game over
-        print(f"\nGame end! Your score is {total_score}.")
+        print(f"\nGame end!")
+        print(f"Score: {total_score}")
+        print(
+            f"Goals finished: {', '.join(np.where(goals_score > 0)[0].astype(str))}")
+
+        return total_score
 
     def possible_move(self, heads, nodes, sttn):
         move = {}
