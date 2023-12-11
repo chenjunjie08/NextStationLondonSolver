@@ -3,6 +3,7 @@ from connect import Connect
 from card import Cards
 import numpy as np
 import random
+import copy
 
 
 # input an int or retry
@@ -31,14 +32,14 @@ class Game():
 
         # line, column, sttn, dist
         idx = 0
-        self.nodes_position = {}
+        nodes_position = {}
         for idx_line, line in enumerate(node_pos):
             for idx_column, node in enumerate(line):
                 if node != '0':
                     self.nodes[idx] = Node(idx)
                     self.nodes[idx].set_pos(idx_line, idx_column)
                     self.nodes[idx].set_sttn(int(node))
-                    self.nodes_position[(idx_line, idx_column)] = idx
+                    nodes_position[(idx_line, idx_column)] = idx
 
                     if idx_line <= 2:
                         if idx_column == 0 and idx_line == 0:
@@ -79,7 +80,7 @@ class Game():
             for direction in directions:
                 current_pos = begin_pos.copy()
                 while 0 <= current_pos[0] < self.map_h and 0 <= current_pos[1] < self.map_w:
-                    tar_idx = self.nodes_position.get(tuple(current_pos))
+                    tar_idx = nodes_position.get(tuple(current_pos))
                     if tar_idx is not None and tar_idx != idx:
                         self.nodes[idx].set_adj(self.nodes[tar_idx])
                         self.connects.append(
@@ -121,7 +122,7 @@ class Game():
                 return idx
         return -1
 
-    def new_game(self, mode='step', auto_play=False):
+    def new_game(self, mode='step', auto_play=False, actor=None):
         assert mode in ['random', 'fix', 'step']
 
         # init game
@@ -214,7 +215,37 @@ class Game():
                 # take action
                 while True:
                     if auto_play:
-                        action = self.random_act(possible_move)
+                        if actor is None:
+                            action = self.random_act(possible_move)
+                        else:
+                            situation = {
+                                'goals_used': goals_used,
+
+                                'round': round,
+                                'color': color,
+
+                                'heads': heads,
+                                'nodes': nodes,
+                                'connects': connects,
+                                'dsts': dsts,
+
+                                'card_used': card_used,
+                                'card': card,
+                                'possible_move': possible_move,
+
+                                'total_score': total_score,
+                                'river_score': river_score,
+                                'dst_score': dst_score,
+                                'inter_score': inter_score,
+                                'trt_score': trt_score,
+                                'goals_score': goals_score,
+
+                                'dsts_total': dsts_total,
+                                'trts_total': trts_total,
+                                'cntr_total': cntr_total,
+                            }
+                            action = actor(copy.deepcopy(self),
+                                           copy.deepcopy(situation))
                         print(
                             f"AI: Card is {'0-' if card.is_mid else ''}{card_idx}. I choose {action}. "
                         )
@@ -332,12 +363,8 @@ class Game():
                         if self.connects[connect_id].is_intersect(self.connects[idx]):
                             self.connects[idx].set_unavailable()
 
-                    total_score = \
-                        river_score.sum() * 2 + \
-                        dst_score.sum() + \
-                        trt_score[0] + \
-                        (inter_score * np.array([2, 5, 9])).sum() + \
-                        (goals_score*goals_used).sum()*10
+                    total_score = self.score_total(
+                        river_score, dst_score, trt_score, inter_score, goals_score, goals_used)
                     # print(f"Current score is {total_score}\n")
 
                     break
@@ -378,6 +405,16 @@ class Game():
         return move
 
     @staticmethod
+    def score_total(river_score, dst_score, trt_score, inter_score, goals_score, goals_used):
+        total_score = 0
+        total_score += river_score.sum() * 2
+        total_score += dst_score.sum()
+        total_score += trt_score[0]
+        total_score += (inter_score * np.array([2, 5, 9])).sum()
+        total_score += (goals_score*goals_used).sum()*10
+        return total_score
+
+    @staticmethod
     def random_act(possible_move):
         if len(possible_move) == 0:
             return 'pass'
@@ -411,10 +448,9 @@ class Game():
 
 
 if __name__ == "__main__":
+    # random player, avg.score = 98
     tmp = Game()
-    tmp.new_game(mode='random', auto_play=True)
-    # print(tmp.nodes[40].info)
-    # print(tmp.connects[69].info)
-    # print(tmp.connects[83].info)
-    # print(tmp.connect_search(tmp.connects, 26, 35))
-    # print(tmp.connects[84].is_intersect(tmp.connects[69]))
+    score = 0
+    for i in range(500):
+        score += tmp.new_game(mode='random', auto_play=True)
+    print(score/500)
