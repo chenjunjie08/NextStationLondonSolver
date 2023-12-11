@@ -2,6 +2,17 @@ from node import Node
 from connect import Connect
 from card import Cards
 from config import Config
+import random
+
+
+# input an int or retry
+def safe_input(prompt):
+    while True:
+        try:
+            res = int(input(prompt))
+        except ValueError:
+            continue
+        return res
 
 
 class Game():
@@ -122,7 +133,7 @@ class Game():
     def game_config(self, config):
         self.config = Config(config)
 
-    def new_game(self, mode='step'):
+    def new_game(self, mode='step', auto_play=False):
         assert mode in ['random', 'fix', 'step']
 
         # init game, but store config
@@ -131,40 +142,41 @@ class Game():
         self.config = config_tmp
 
         # init score
-        self.total_score = 0
-        self.round_score = [0, 0, 0, 0]
-        self.inter_score = [0, 0, 0]
-        self.goals_score = [0, 0]
+        total_score = 0
+        round_score = [0, 0, 0, 0]
+        inter_score = [0, 0, 0]
+        goals_score = [0, 0]
 
         # init round
-        self.round = 0
+        round = 0
 
         # init color
-        self.color = None
+        color = None
 
         print("Game Start!\n")
 
         print("### Round 1 ###")
 
-        while self.round <= 3:
+        while round <= 3:
 
             if mode == 'step':
-                self.color = int(input(f'color of round {self.round+1} is: '))
+                color = safe_input(f'color of round {round+1} is: ')
+
             # init heads, nodes, and connects
-            heads = [self.nodes_head[self.color]]
-            nodes = [self.nodes_head[self.color]]
+            heads = [self.nodes_head[color]]
+            nodes = [self.nodes_head[color]]
             connects = []
 
             # init new cards
             cards = Cards()
 
-            while cards.end_num <= 5:
+            while cards.end_num <= 4:
                 card_used = []
                 if mode == 'step':
-                    card_idx = int(input('Flipped card is: '))
+                    card_idx = safe_input('Flipped card is: ')
                     card_used.append(card_idx)
                     if card_idx == 0:
-                        card_idx = input('Next card is: ')
+                        card_idx = safe_input('Next card is: ')
                         card_used.append(card_idx)
                         cards.cards[card_idx].set_is_mid()
                     card = cards.cards[card_idx]
@@ -176,20 +188,76 @@ class Game():
 
                 # possible move
                 if card.is_mid:
-                    possible_move = self.possible_move(nodes, card.sttn)
+                    possible_move = self.possible_move(nodes, nodes, card.sttn)
                 else:
-                    possible_move = self.possible_move(heads, card.sttn)
+                    possible_move = self.possible_move(heads, nodes, card.sttn)
 
                 # take action
                 while True:
-                    action = input("Your action: ")
-                    if action == 'show':
-                        self.show(card, card_used, possible_move)
+                    if auto_play:
+                        action = self.random_act(possible_move)
+                        print(f"AI: I choose {action}\n")
+                    else:
+                        action = input("Your action: ")
+
+                    if action in ['show', 's']:
+                        self.show(round, color, card, card_used,
+                                  possible_move, nodes, connects)
                         continue
-                    if action == 'pass':
+                    if action in ['pass', 'p']:
+                        break
+
+                    try:
+                        begin, end = action.split('-')
+                        begin = int(begin)
+                        end = int(end)
+                    except:
+                        print("input: show, pass, or xx-xx\n")
                         continue
 
-    def possible_move(self, heads, sttn):
+                    # check if valid
+                    if begin in possible_move.keys() and end in possible_move[begin]:
+                        pass
+                    else:
+                        print("Move invalid!\n")
+                        continue
+
+                    # modify heads
+                    if len(heads) == 1:
+                        heads.append(end)
+                    elif not begin in heads:
+                        heads.append(end)
+                    else:
+                        for idx, head in enumerate(heads):
+                            if head == begin:
+                                heads[idx] = end
+                                break
+
+                    # modify nodes
+                    nodes.append(end)
+                    self.nodes[end].set_color(color)
+
+                    # modify connects
+                    connect_id = self.connect_search(self.connects, begin, end)
+                    connects.append(connect_id)
+                    self.connects[connect_id].set_unavailable()
+                    for idx in range(len(self.connects)):
+                        if idx == connect_id:
+                            continue
+                        if not self.connects[idx].is_available:
+                            continue
+                        if self.connects[connect_id].is_intersect(self.connects[idx]):
+                            self.connects[idx].set_unavailable()
+
+                    break
+
+            # next round
+            round += 1
+
+        # Game over
+        print(f"Game end! Your score is {total_score}.")
+
+    def possible_move(self, heads, nodes, sttn):
         move = {}
         for idx, connect in enumerate(self.connects):
             if not connect.is_available:
@@ -204,7 +272,11 @@ class Game():
                 begin = connect.endpoint[1].id
                 end = connect.endpoint[0]
 
-            if sttn == 5 or end.sttn == sttn:
+            # no circle
+            if end.id in nodes:
+                continue
+
+            if sttn == 5 or end.sttn == sttn or end.sttn == 5:
                 if move.get(begin) is None:
                     move[begin] = [end.id]
                 else:
@@ -212,18 +284,30 @@ class Game():
 
         return move
 
-    def show(self, card, card_used, move):
+    @staticmethod
+    def random_act(possible_move):
+        if len(possible_move) == 0:
+            return 'pass'
+        begin = random.choice(list(possible_move.keys()))
+        end = random.choice(possible_move[begin])
+        return f"{begin}-{end}"
+
+    def show(self, round, color, card, card_used, move, nodes, connects):
         print()
         print("### current info ###")
-        print(f"Round: {self.round+1}")
-        print(f"color: {self.color}")
+        print(f"Round: {round+1}")
+        print(f"color: {color}")
         print(
             f"current card: {card.sttn}, {'red' if card.is_red else 'blue'}, {'mid' if card.is_mid else 'head'}")
+        print(f"nodes: {','.join([str(node) for node in nodes])}")
+        print(
+            f"connects: {','.join(['-'.join([str(self.connects[ct].endpoint[0].id), str(self.connects[ct].endpoint[1].id)]) for ct in connects])}")
         print(f"possible move: {'pass' if len(move)==0 else ''}")
         if len(move) > 0:
             for key, values in move.items():
-                print(f"{key} to {','.join([str(value) for value in values])}")
-        print(f"used card: {card_used[:-1]}")
+                print(
+                    f"- {key} to {','.join([str(value) for value in values])}")
+        print(f"used cards: {card_used[:-1]}")
         print(f"score: {self.total_score}")
 
         print()
@@ -231,7 +315,7 @@ class Game():
 
 if __name__ == "__main__":
     tmp = Game()
-    tmp.new_game()
+    tmp.new_game(auto_play=True)
     # print(tmp.nodes[40].info)
     # print(tmp.connects[69].info)
     # print(tmp.connects[83].info)
