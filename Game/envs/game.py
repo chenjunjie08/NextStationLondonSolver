@@ -27,7 +27,7 @@ class Game():
 
         # node generate
         node_pos = []
-        with open('./game/node_pos.txt') as f:
+        with open('Game/envs/node_pos.txt') as f:
             for line in f.readlines():
                 node_pos.append(line.strip())
         self.map_h = len(node_pos)
@@ -645,7 +645,7 @@ class Game():
         total_score += dst_score.sum()
         total_score += trt_score[0]
         total_score += (inter_score * np.array([2, 5, 9])).sum()
-        total_score += (goals_score*goals_used).sum()*10
+        total_score += (goals_score * goals_used).sum() * 10
         return total_score
 
     @staticmethod
@@ -704,7 +704,8 @@ class Game():
 
 
 if __name__ == "__main__":
-    pass
+    tmp = Game()
+    pdb.set_trace()
     # # random player, avg.score = 98
     # tmp = Game()
     # score = 0
