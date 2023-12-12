@@ -4,6 +4,9 @@ from card import Cards
 import numpy as np
 import random
 import copy
+from tqdm import tqdm
+import pickle
+import pdb
 
 
 # input an int or retry
@@ -377,6 +380,237 @@ class Game():
 
         return total_score
 
+    # for generating data and quick test
+    def new_game_quiet(self, actor=None, is_save=False):
+        # whether save data
+        if is_save:
+            save_data = []
+
+        # init game
+        self.__init__()
+
+        # init round
+        round = -1
+
+        # init color
+        colors = [0, 1, 2, 3]
+        random.shuffle(colors)
+
+        # init score
+        total_score = 0
+        river_score = np.array([0, 0, 0, 0])
+        dst_score = np.array([0, 0, 0, 0])
+        inter_score = np.array([0, 0, 0])
+        trt_score = np.array([0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25])
+        goals_score = np.array([0, 0, 0, 0, 0])
+        goals_used = np.array([0, 0, 0, 0, 0])
+        goals_used[np.random.choice([0, 1, 2, 3, 4], 2, False)] = 1
+
+        # init goal-related var
+        dsts_total = np.array([0 for _ in range(13)])
+        trts_total = [9, 16, 19, 36, 49]
+        cntr_total = [18, 19, 20, 25, 26, 30, 32, 33, 34]
+
+        while round < 3:
+            round += 1
+
+            # color used in this round
+            color = colors[round]
+
+            # init heads, nodes, and connects
+            heads = [self.nodes_head[color]]
+            nodes = [self.nodes_head[color]]
+            connects = []
+            self.nodes[self.nodes_head[color]].set_color(color)
+
+            # init new cards
+            cards = Cards()
+            card_used = []
+            card_orders = [_ for _ in range(11)]
+            random.shuffle(card_orders)
+
+            # init dst
+            dsts = np.array([0 for _ in range(13)])
+            dsts[self.nodes[self.nodes_head[color]].dst] += 1
+
+            while cards.end_num <= 4:
+                card_idx = card_orders.pop(0)
+                card_used.append(card_idx)
+                if card_idx == 0:
+                    card_idx = card_orders.pop(0)
+                    card_used.append(card_idx)
+                    cards.cards[card_idx].set_is_mid()
+                card = cards.cards[card_idx]
+                cards.end_num += int(card.is_red)
+
+                # possible move
+                if card.is_mid:
+                    possible_move = self.possible_move(nodes, nodes, card.sttn)
+                else:
+                    possible_move = self.possible_move(heads, nodes, card.sttn)
+
+                # take action
+                while True:
+                    situation = {
+                        'goals_used': goals_used,
+
+                        'round': round,
+                        'color': color,
+
+                        'heads': heads,
+                        'nodes': nodes,
+                        'connects': connects,
+                        'dsts': dsts,
+
+                        'card_used': card_used,
+                        'card': card,
+                        'possible_move': possible_move,
+
+                        'total_score': total_score,
+                        'river_score': river_score,
+                        'dst_score': dst_score,
+                        'inter_score': inter_score,
+                        'trt_score': trt_score,
+                        'goals_score': goals_score,
+
+                        'dsts_total': dsts_total,
+                        'trts_total': trts_total,
+                        'cntr_total': cntr_total,
+                    }
+                    if is_save:
+                        save_data.append(self.save_data(
+                            copy.deepcopy(situation)))
+                    if actor is None:
+                        action = self.random_act(possible_move)
+                    else:
+                        action = actor(copy.deepcopy(self),
+                                       copy.deepcopy(situation))
+
+                    # if action in ['show', 's']:
+                    #     self.show(round, color, card, card_used,
+                    #               possible_move, nodes, connects, total_score)
+                    #     continue
+                    if action in ['pass', 'p']:
+                        break
+
+                    try:
+                        begin, end = action.split('-')
+                        begin = int(begin)
+                        end = int(end)
+                    except:
+                        print("input: show, pass, or xx-xx\n")
+                        continue
+
+                    # check if valid
+                    if begin in possible_move.keys() and end in possible_move[begin]:
+                        pass
+                    else:
+                        print("Move invalid!\n")
+                        continue
+
+                    # modify heads
+                    if len(heads) == 1:
+                        heads.append(end)
+                    elif not begin in heads:
+                        heads.append(end)
+                    else:
+                        for idx, head in enumerate(heads):
+                            if head == begin:
+                                heads[idx] = end
+                                break
+
+                    # modify nodes
+                    nodes.append(end)
+
+                    dsts[self.nodes[end].dst] += 1
+                    dst_score[round] = self.score_dst(dsts)
+                    # goal 1
+                    if goals_score[1] == 0:
+                        dsts_total[self.nodes[end].dst] = 1
+                        if dsts_total.sum() == 13:
+                            goals_score[1] == 1
+
+                    if self.nodes[end].is_trt:
+                        if len(trt_score) > 1:
+                            trt_score = trt_score[1:]
+                        # goal 2
+                        if goals_score[2] == 0:
+                            for idx, val in enumerate(trts_total):
+                                if self.nodes[end].id == val:
+                                    trts_total.pop(idx)
+                                    break
+                            if len(trts_total) == 0:
+                                goals_score[2] = 1
+
+                    # goal 3
+                    if goals_score[3] == 0:
+                        for idx, val in enumerate(cntr_total):
+                            if self.nodes[end].id == val:
+                                cntr_total.pop(idx)
+                                break
+                        if len(cntr_total) == 0:
+                            goals_score[3] = 1
+
+                    self.nodes[end].set_color(color)
+                    if sum(self.nodes[end].color) < 2:
+                        pass
+                    elif sum(self.nodes[end].color) == 2:
+                        inter_score[0] += 1
+                    elif sum(self.nodes[end].color) == 3:
+                        inter_score[0] -= 1
+                        inter_score[1] += 1
+                    elif sum(self.nodes[end].color) == 4:
+                        inter_score[1] -= 1
+                        inter_score[2] += 1
+
+                    if len(nodes) == 2:
+                        if sum(self.nodes[begin].color) < 2:
+                            pass
+                        elif sum(self.nodes[begin].color) == 2:
+                            inter_score[0] += 1
+                        elif sum(self.nodes[begin].color) == 3:
+                            inter_score[0] -= 1
+                            inter_score[1] += 1
+                        elif sum(self.nodes[begin].color) == 4:
+                            inter_score[1] -= 1
+                            inter_score[2] += 1
+
+                    # goal 0
+                    if goals_score[0] == 0 and inter_score.sum() >= 8:
+                        goals_score[0] = 1
+
+                    # modify connects
+                    connect_id = self.connect_search(self.connects, begin, end)
+                    connects.append(connect_id)
+                    self.connects[connect_id].set_color(color)
+                    if self.connects[connect_id].is_cross_river:
+                        river_score[round] += 1
+                    # goal 4
+                    if goals_score[4] == 0 and river_score.sum() >= 6:
+                        goals_score[4] = 1
+
+                    self.connects[connect_id].set_unavailable()
+                    for idx in range(len(self.connects)):
+                        if idx == connect_id:
+                            continue
+                        if not self.connects[idx].is_available:
+                            continue
+                        if self.connects[connect_id].is_intersect(self.connects[idx]):
+                            self.connects[idx].set_unavailable()
+
+                    total_score = self.score_total(
+                        river_score, dst_score, trt_score, inter_score, goals_score, goals_used)
+
+                    break
+
+        # Game over
+        if is_save:
+            for idx in range(len(save_data)):
+                save_data[idx]['final_score'] = total_score
+            return total_score, save_data
+
+        return total_score
+
     def possible_move(self, heads, nodes, sttn):
         move = {}
         for idx, connect in enumerate(self.connects):
@@ -426,6 +660,28 @@ class Game():
     def score_dst(dsts):
         return dsts.max() * (dsts > 0).astype(int).sum()
 
+    def save_data(self, situation):
+        data = {}
+
+        # nodes info: colors
+        nodes_info = []
+        for idx in range(len(self.nodes)):
+            nodes_info.append(self.nodes[idx].color[:])
+        data['nodes_info'] = nodes_info
+
+        # connects info: colors, is_available
+        connects_color = []
+        connects_avail = []
+        for idx in range(len(self.connects)):
+            connects_color.append(self.connects[idx].color)
+            connects_avail.append(self.connects[idx].is_available)
+        data['connects_info'] = (connects_color, connects_avail)
+
+        # situation
+        data['situation'] = situation
+
+        return data
+
     def show(self, round, color, card, card_used, move, nodes, connects, score):
         print()
         print("### current info ###")
@@ -448,9 +704,15 @@ class Game():
 
 
 if __name__ == "__main__":
-    # random player, avg.score = 98
-    tmp = Game()
-    score = 0
-    for i in range(500):
-        score += tmp.new_game(mode='random', auto_play=True)
-    print(score/500)
+    pass
+    # # random player, avg.score = 98
+    # tmp = Game()
+    # score = 0
+    # for i in tqdm(range(500)):
+    #     score += tmp.new_game_quiet()
+    # print(score/500)
+
+    # tmp = Game()
+    # score, save_data = tmp.new_game_quiet(is_save=True)
+    # with open('0002.data', 'wb') as f:
+    #     pickle.dump(save_data, f)
