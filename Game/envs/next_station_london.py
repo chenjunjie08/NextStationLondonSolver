@@ -19,6 +19,9 @@ class NextStationLondonEnv(gym.Env):
 
         self.game = Game()
 
+        self.pass_reward = 0
+        self.invalid_reward = 0
+
     def _get_obs(self):
         # connects
         obs_connects = np.zeros((155, 5))
@@ -49,7 +52,7 @@ class NextStationLondonEnv(gym.Env):
         obs_is_mid = np.zeros(1)
         obs_is_mid[0] = int(self.card.is_mid)
 
-        return np.concatenate([obs_connects, obs_goal, obs_round, obs_color, obs_card_used, obs_card, obs_is_mid])
+        return np.concatenate([obs_connects, obs_goal, obs_round, obs_color, obs_card_used, obs_card, obs_is_mid]).astype(int)
 
     def _get_info(self):
         return {
@@ -153,12 +156,12 @@ class NextStationLondonEnv(gym.Env):
 
                 observation = self._get_obs()
                 info = self._get_info()
-                return observation, 0, False, False, info
+                return observation, self.pass_reward, False, False, info
 
             if self.round == 3:
                 observation = self._get_obs()
                 info = self._get_info()
-                return observation, 0, True, False, info
+                return observation, self.pass_reward, True, False, info
 
             else:
                 self.round += 1
@@ -169,7 +172,7 @@ class NextStationLondonEnv(gym.Env):
 
                 observation = self._get_obs()
                 info = self._get_info()
-                return observation, 0, False, False, info
+                return observation, self.pass_reward, False, False, info
 
         # check if valid
         connect = self.game.connects[action]
@@ -182,7 +185,7 @@ class NextStationLondonEnv(gym.Env):
         else:
             observation = self._get_obs()
             info = self._get_info()
-            return observation, -1, False, False, info
+            return observation, self.invalid_reward, False, False, info
 
         if begin in self.possible_move.keys() and end in self.possible_move[begin]:
             # modify heads
@@ -278,7 +281,7 @@ class NextStationLondonEnv(gym.Env):
 
             total_score = self.game.score_total(
                 self.river_score, self.dst_score, self.trt_score, self.inter_score, self.goals_score, self.goals_used)
-            reward = self.total_score - total_score
+            reward = total_score - self.total_score
             self.total_score = total_score
 
             if self.cards.end_num < 5:
@@ -308,13 +311,14 @@ class NextStationLondonEnv(gym.Env):
         else:
             observation = self._get_obs()
             info = self._get_info()
-            return observation, -1, False, False, info
+            return observation, self.invalid_reward, False, False, info
 
 
 def auto_test():
     game = NextStationLondonEnv()
     game.reset()
     info = game._get_info()
+    total_reward = 0
 
     while True:
         possible_move = info['possible_move']
@@ -326,8 +330,10 @@ def auto_test():
             action = game.game.connect_search(game.game.connects, begin, end)
         obs, reward, terminate, trunction, info = game.step(action)
         total_score = info['total_score']
+        total_reward += reward
         if terminate:
             print(total_score)
+            print(total_reward)
             break
 
 
