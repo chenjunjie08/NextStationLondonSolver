@@ -1,5 +1,6 @@
 import gymnasium as gym
 from Agents.ppo_agent import PPO_Agent
+from Agents.dqn_agent import DQN_Agent
 import torch
 import pdb
 import numpy as np
@@ -73,8 +74,12 @@ def actor(game, situation):
 
 
 if __name__ == '__main__':
-    agent = PPO_Agent(gym.make("NSL/NextStationLondon-v0"))
-    agent.load('./checkpoints/PPO_test_1_1702462709.pth')
+    # agent = PPO_Agent(gym.make("NSL/NextStationLondon-v0"))
+    # agent.load('./checkpoints/PPO_test_1_1702462709.pth')
+    # agent.cuda()
+
+    agent = DQN_Agent(gym.make("NSL/NextStationLondon-v0"))
+    agent.load('./checkpoints/DQN_DQN_1_1702473994.pth')
     agent.cuda()
 
     game = Game()

@@ -1,10 +1,12 @@
 import gymnasium as gym
 from Agents.ppo_agent import PPO_Agent
+from Agents.dqn_agent import DQN_Agent
 import torch
 import pdb
 import numpy as np
 from tqdm import tqdm
 import Game
+import random
 
 
 def auto_test(env, agent, N=50):
@@ -25,9 +27,20 @@ def auto_test(env, agent, N=50):
 
 
 if __name__ == '__main__':
+    seed = 0
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     env = gym.make("NSL/NextStationLondon-v0")
-    agent = PPO_Agent(env)
-    agent.load('./checkpoints/PPO_test_1_1702462709.pth')
+
+    # # PPO
+    # agent = PPO_Agent(env)
+    # agent.load('./checkpoints/PPO_test_1_1702462709.pth')
+    # agent.cuda()
+
+    # DQN
+    agent = DQN_Agent(env)
+    agent.load('./checkpoints/DQN_DQN_1_1702473994.pth')
     agent.cuda()
 
     auto_test(env, agent, 100)
