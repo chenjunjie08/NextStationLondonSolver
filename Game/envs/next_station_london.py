@@ -12,7 +12,7 @@ class NextStationLondonEnv(gym.Env):
     def __init__(self):
         # observe connects, goals, round, color, card used, card, is_mid
         self.observation_space = spaces.Box(0, 1, shape=(
-            155 * 5 + 5 + 4 + 4 + 11 + 11 + 1,), dtype=int)
+            155 * 5 + 5 + 4 + 4 + 11 + 11 + 1 + 156,), dtype=int)
 
         # We have 156 actions, corresponding to 155 connects and pass
         self.action_space = spaces.Discrete(156)
@@ -52,7 +52,16 @@ class NextStationLondonEnv(gym.Env):
         obs_is_mid = np.zeros(1)
         obs_is_mid[0] = int(self.card.is_mid)
 
-        return np.concatenate([obs_connects, obs_goal, obs_round, obs_color, obs_card_used, obs_card, obs_is_mid]).astype(int)
+        # possible_move
+        obs_possible_move = np.zeros(156)
+        obs_possible_move[-1] = 1
+        for begin in self.possible_move.keys():
+            for end in self.possible_move[begin]:
+                obs_possible_move[self.game.connect_search(
+                    self.game.connects, begin, end)] = 1
+
+        return np.concatenate([obs_connects, obs_goal, obs_round, obs_color,
+                               obs_card_used, obs_card, obs_is_mid, obs_possible_move]).astype(int)
 
     def _get_info(self):
         return {
@@ -325,15 +334,14 @@ def auto_test():
         if len(possible_move) == 0:
             action = 155
         else:
-            begin = random.choice(list(possible_move.keys()))
-            end = random.choice(possible_move[begin])
-            action = game.game.connect_search(game.game.connects, begin, end)
+            # begin = random.choice(list(possible_move.keys()))
+            # end = random.choice(possible_move[begin])
+            # action = game.game.connect_search(game.game.connects, begin, end)
+            action = random.choice([_ for _ in range(156)])
         obs, reward, terminate, trunction, info = game.step(action)
         total_score = info['total_score']
-        total_reward += reward
         if terminate:
             print(total_score)
-            print(total_reward)
             break
 
 

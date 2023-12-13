@@ -106,19 +106,19 @@ class Agent(nn.Module):
         super().__init__()
         self.critic = nn.Sequential(
             layer_init(
-                nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+                nn.Linear(np.array(envs.single_observation_space.shape).prod(), 128)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
+            layer_init(nn.Linear(128, 128)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 1), std=1.0),
+            layer_init(nn.Linear(128, 1), std=1.0),
         )
         self.actor = nn.Sequential(
             layer_init(
-                nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+                nn.Linear(np.array(envs.single_observation_space.shape).prod(), 128)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
+            layer_init(nn.Linear(128, 128)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, envs.single_action_space.n), std=0.01),
+            layer_init(nn.Linear(128, envs.single_action_space.n), std=0.01),
         )
 
     def get_value(self, x):
@@ -126,6 +126,8 @@ class Agent(nn.Module):
 
     def get_action_and_value(self, x, action=None):
         logits = self.actor(x)
+        mask = x[:, -156:]
+        logits = logits - (1 - mask) * 20
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
@@ -226,6 +228,8 @@ if __name__ == "__main__":
                 if "final_info" in infos:
                     for info in infos["final_info"]:
                         if info and "episode" in info:
+                            pbar.set_postfix(
+                                avg_score=f"{int(info['episode']['r'][0]):03d}")
                             # print(
                             #     f"global_step={global_step}, episodic_return={info['episode']['r']}")
                             writer.add_scalar(
@@ -346,8 +350,14 @@ if __name__ == "__main__":
             writer.add_scalar("charts/SPS", int(global_step /
                                                 (time.time() - start_time)), global_step)
 
-            pbar.set_postfix(avg_score=f"{infos['total_score'].mean()}")
+            # pbar.set_postfix(
+            #     avg_score=f"{int(infos['total_score'].mean())}")
             pbar.update()
+
+    torch.save(
+        {'model_state_dict': agent.state_dict()},
+        f"checkpoints/PPO_{args.exp_name}_{args.seed}_{int(time.time())}.pth"
+    )
 
     envs.close()
     writer.close()
