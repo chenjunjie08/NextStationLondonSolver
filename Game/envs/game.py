@@ -234,6 +234,7 @@ class Game():
 
                                 'card_used': card_used,
                                 'card': card,
+                                'card_idx': card_idx,
                                 'possible_move': possible_move,
 
                                 'total_score': total_score,
@@ -464,6 +465,7 @@ class Game():
 
                         'card_used': card_used,
                         'card': card,
+                        'card_idx': card_idx,
                         'possible_move': possible_move,
 
                         'total_score': total_score,

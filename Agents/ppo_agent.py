@@ -46,4 +46,5 @@ class PPO_Agent(nn.Module):
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+        return action
+        # , probs.log_prob(action), probs.entropy(), self.critic(x)

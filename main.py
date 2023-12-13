@@ -4,6 +4,7 @@ import torch
 import pdb
 import numpy as np
 from tqdm import tqdm
+import Game
 
 
 def auto_test(env, agent, N=50):
