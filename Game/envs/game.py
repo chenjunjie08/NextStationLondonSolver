@@ -116,8 +116,6 @@ class Game():
         # color
         self.nodes_head = [13, 29, 21, 40]
 
-        # TODO: pencil ability
-
     @staticmethod
     def connect_search(connnect_list, idx1, idx2):
         for idx, connect in enumerate(connnect_list):
@@ -125,7 +123,7 @@ class Game():
                 return idx
         return -1
 
-    def new_game(self, mode='step', auto_play=False, actor=None):
+    def new_game(self, mode='step', active_power=False, auto_play=False, actor=None):
         assert mode in ['random', 'fix', 'step']
 
         # init game
@@ -188,6 +186,12 @@ class Game():
             dsts = np.array([0 for _ in range(13)])
             dsts[self.nodes[self.nodes_head[color]].dst] += 1
 
+            # init power
+            if active_power:
+                power = safe_input('Power is: ')
+                power_used = False
+            double_count = 0
+
             while cards.end_num <= 4:
                 if mode == 'step':
                     card_idx = safe_input('Flipped card is: ')
@@ -227,6 +231,10 @@ class Game():
                                 'round': round,
                                 'color': color,
 
+                                'power': power,
+                                'power_used': power_used,
+                                'double_count': double_count,
+
                                 'heads': heads,
                                 'nodes': nodes,
                                 'connects': connects,
@@ -262,6 +270,37 @@ class Game():
                         continue
                     if action in ['pass', 'p']:
                         break
+
+                    if action == 'power':
+                        if power_used:
+                            print("Power Already Used!\n")
+                            continue
+
+                        if power == 0:
+                            double_count = 1
+                        elif power == 1:
+                            card.sttn = 5
+                        elif power == 2:
+                            card.set_is_mid()
+                        elif power == 3:
+                            # simplified action, will only put x2 at the most crowded dst
+                            dsts_most = np.random.choice(
+                                np.where(dsts == dsts.max())[0])
+                            dsts[dsts_most] += 1
+                            print(f"Dist {dsts_most} has a x2 mark")
+                        else:
+                            print("Invalid power!\n")
+                            continue
+
+                        power_used = True
+                        # possible move
+                        if card.is_mid:
+                            possible_move = self.possible_move(
+                                nodes, nodes, card.sttn)
+                        else:
+                            possible_move = self.possible_move(
+                                heads, nodes, card.sttn)
+                        continue
 
                     try:
                         begin, end = action.split('-')
@@ -371,6 +410,24 @@ class Game():
                         river_score, dst_score, trt_score, inter_score, goals_score, goals_used)
                     # print(f"Current score is {total_score}\n")
 
+                    # power: double
+                    if double_count == 0:
+                        pass
+                    elif double_count == 1:
+                        double_count = 2
+                        if card.sttn == 5:
+                            card.sttn = self.nodes[end].sttn
+                        # possible move
+                        if card.is_mid:
+                            possible_move = self.possible_move(
+                                nodes, nodes, card.sttn)
+                        else:
+                            possible_move = self.possible_move(
+                                heads, nodes, card.sttn)
+                        continue
+                    elif double_count == 2:
+                        double_count = 0
+
                     break
 
         # Game over
@@ -382,7 +439,7 @@ class Game():
         return total_score
 
     # for generating data and quick test
-    def new_game_quiet(self, actor=None, is_save=False):
+    def new_game_quiet(self, active_power=False, actor=None, is_save=False):
         # whether save data
         if is_save:
             save_data = []
@@ -434,6 +491,12 @@ class Game():
             dsts = np.array([0 for _ in range(13)])
             dsts[self.nodes[self.nodes_head[color]].dst] += 1
 
+            # init power
+            if active_power:
+                power = safe_input('Power is: ')
+                power_used = False
+            double_count = 0
+
             while cards.end_num <= 4:
                 card_idx = card_orders.pop(0)
                 card_used.append(card_idx)
@@ -457,6 +520,10 @@ class Game():
 
                         'round': round,
                         'color': color,
+
+                        'power': power,
+                        'power_used': power_used,
+                        'double_count': double_count,
 
                         'heads': heads,
                         'nodes': nodes,
@@ -494,6 +561,37 @@ class Game():
                     #     continue
                     if action in ['pass', 'p']:
                         break
+
+                    if action == 'power':
+                        if power_used:
+                            print("Power Already Used!\n")
+                            continue
+
+                        if power == 0:
+                            double_count = 1
+                        elif power == 1:
+                            card.sttn = 5
+                        elif power == 2:
+                            card.set_is_mid()
+                        elif power == 3:
+                            # simplified action, will only put x2 at the most crowded dst
+                            dsts_most = np.random.choice(
+                                np.where(dsts == dsts.max())[0])
+                            dsts[dsts_most] += 1
+                            print(f"Dist {dsts_most} has a x2 mark")
+                        else:
+                            print("Invalid power!\n")
+                            continue
+
+                        power_used = True
+                        # possible move
+                        if card.is_mid:
+                            possible_move = self.possible_move(
+                                nodes, nodes, card.sttn)
+                        else:
+                            possible_move = self.possible_move(
+                                heads, nodes, card.sttn)
+                        continue
 
                     try:
                         begin, end = action.split('-')
@@ -603,6 +701,24 @@ class Game():
                     total_score = self.score_total(
                         river_score, dst_score, trt_score, inter_score, goals_score, goals_used)
 
+                    # power: double
+                    if double_count == 0:
+                        pass
+                    elif double_count == 1:
+                        double_count = 2
+                        if card.sttn == 5:
+                            card.sttn = self.nodes[end].sttn
+                        # possible move
+                        if card.is_mid:
+                            possible_move = self.possible_move(
+                                nodes, nodes, card.sttn)
+                        else:
+                            possible_move = self.possible_move(
+                                heads, nodes, card.sttn)
+                        continue
+                    elif double_count == 2:
+                        double_count = 0
+
                     break
 
         # Game over
@@ -707,7 +823,7 @@ class Game():
 
 if __name__ == "__main__":
     tmp = Game()
-    pdb.set_trace()
+    tmp.new_game(mode='step', active_power=True)
     # # random player, avg.score = 98
     # tmp = Game()
     # score = 0
