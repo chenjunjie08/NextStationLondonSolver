@@ -278,6 +278,8 @@ class Game():
                                   possible_move, nodes, connects, total_score)
                         continue
                     if action in ['pass', 'p']:
+                        if double_count == 1:
+                            double_count = 0
                         break
 
                     if action == 'power':
@@ -576,6 +578,8 @@ class Game():
                     #               possible_move, nodes, connects, total_score)
                     #     continue
                     if action in ['pass', 'p']:
+                        if double_count == 1:
+                            double_count = 0
                         break
 
                     if action == 'power':

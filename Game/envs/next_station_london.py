@@ -194,6 +194,9 @@ class NextStationLondonEnv(gym.Env):
     def step(self, action):
         # pass
         if action == 155:
+            if self.double_count == 1:
+                self.double_count = 0
+
             if self.cards.end_num < 5:
                 self.draw_a_card()
                 self.get_possible_move()

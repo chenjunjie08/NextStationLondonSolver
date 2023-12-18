@@ -93,7 +93,7 @@ def actor(game, situation):
 
 if __name__ == '__main__':
     agent = PPO_Agent(gym.make("NSL/NextStationLondon-v0"))
-    agent.load('./checkpoints/PPO_PPO_1_1702894772.pth')
+    agent.load('./checkpoints/PPO_PPO_1_1702904622.pth')
     agent.cuda()
 
     # agent = DQN_Agent(gym.make("NSL/NextStationLondon-v0"))
