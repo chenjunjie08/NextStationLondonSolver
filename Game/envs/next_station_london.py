@@ -19,9 +19,9 @@ class NextStationLondonEnv(gym.Env):
 
         self.game = Game()
 
-        self.pass_reward = 0
-        self.invalid_reward = 0
-        self.power_reward = 0
+        self.pass_reward = -0.1
+        self.invalid_reward = -1
+        self.power_reward = -0.3
 
         self.active_power = True
         # self.active_power = random.choice([True, False])

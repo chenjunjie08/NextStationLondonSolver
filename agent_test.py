@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     # PPO
     agent = PPO_Agent(env)
-    agent.load('./checkpoints/PPO_PPO_1_1702894772.pth')
+    agent.load('./checkpoints/PPO_PPO_1_1702904622.pth')
     agent.cuda()
 
     # # DQN

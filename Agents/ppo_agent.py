@@ -39,12 +39,13 @@ class PPO_Agent(nn.Module):
     def get_value(self, x):
         return self.critic(x)
 
-    def get_action_and_value(self, x, action=None):
+    def get_action_and_value(self, x):
         logits = self.actor(x)
         mask = x[:, -157:]
         logits = logits - (1 - mask) * 20
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
+        action = torch.argmax(logits, dim=1)
+        if mask.sum() == 1:
+            action = torch.zeros_like(action) + 155
+        # probs = Categorical(logits=logits)
+        # action = probs.sample()
         return action
-        # , probs.log_prob(action), probs.entropy(), self.critic(x)

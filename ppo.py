@@ -36,6 +36,8 @@ class Args:
     """the entity (team) of wandb's project"""
     capture_video: bool = False
     """whether to capture videos of the agent performances (check out `videos` folder)"""
+    ckpt: str = None
+    """continue training"""
 
     # Algorithm specific arguments
     env_id: str = "CartPole-v1"
@@ -178,6 +180,9 @@ if __name__ == "__main__":
 
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+
+    if args.ckpt:
+        agent.load_state_dict(torch.load(args.ckpt)['model_state_dict'])
 
     # ALGO Logic: Storage setup
     obs = torch.zeros((args.num_steps, args.num_envs) +
