@@ -151,6 +151,9 @@ class Game():
         trts_total = [9, 16, 19, 36, 49]
         cntr_total = [18, 19, 20, 25, 26, 30, 32, 33, 34]
 
+        # init power
+        power_lst = np.zeros(4)
+
         print("Game Start!\n")
         if mode == 'step':
             goals = input("Goals of this game: ").split(",")
@@ -189,6 +192,7 @@ class Game():
             # init power
             if active_power:
                 power = safe_input('Power is: ')
+                power_lst[power] = 1
                 power_used = False
             double_count = 0
 
@@ -233,6 +237,7 @@ class Game():
 
                                 'active_power': active_power,
                                 'power': power,
+                                'power_lst': power_lst,
                                 'power_used': power_used,
                                 'double_count': double_count,
 
@@ -415,7 +420,7 @@ class Game():
                     if double_count == 0:
                         pass
                     elif double_count == 1:
-                        double_count = 2
+                        double_count = 0
                         if card.sttn == 5:
                             card.sttn = self.nodes[end].sttn
                         # possible move
@@ -426,8 +431,6 @@ class Game():
                             possible_move = self.possible_move(
                                 heads, nodes, card.sttn)
                         continue
-                    elif double_count == 2:
-                        double_count = 0
 
                     break
 
@@ -470,6 +473,9 @@ class Game():
         trts_total = [9, 16, 19, 36, 49]
         cntr_total = [18, 19, 20, 25, 26, 30, 32, 33, 34]
 
+        # init power
+        power_lst = np.zeros(4)
+
         while round < 3:
             round += 1
 
@@ -495,6 +501,7 @@ class Game():
             # init power
             if active_power:
                 power = safe_input('Power is: ')
+                power_lst[power] = 1
                 power_used = False
             double_count = 0
 
@@ -524,6 +531,7 @@ class Game():
 
                         'active_power': active_power,
                         'power': power,
+                        'power_lst': power_lst,
                         'power_used': power_used,
                         'double_count': double_count,
 
@@ -707,7 +715,7 @@ class Game():
                     if double_count == 0:
                         pass
                     elif double_count == 1:
-                        double_count = 2
+                        double_count = 0
                         if card.sttn == 5:
                             card.sttn = self.nodes[end].sttn
                         # possible move
@@ -718,8 +726,6 @@ class Game():
                             possible_move = self.possible_move(
                                 heads, nodes, card.sttn)
                         continue
-                    elif double_count == 2:
-                        double_count = 0
 
                     break
 

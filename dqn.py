@@ -104,7 +104,7 @@ class QNetwork(nn.Module):
 
     def forward(self, x):
         q_values = self.network(x.float())
-        q_values = q_values * x[:, -156:]
+        q_values = q_values * x[:, -157:]
 
         if q_values.max() == 0:
             q_values[:, -1] = - q_values[:, -1]

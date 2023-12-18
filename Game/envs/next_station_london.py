@@ -10,17 +10,18 @@ from card import Cards
 class NextStationLondonEnv(gym.Env):
 
     def __init__(self):
-        # observe connects, goals, round, color, card used, card, is_mid
+        # observe connects, goals, round, color, card used, card, is_mid, active_power, power_lst, power, possible_move, power_used
         self.observation_space = spaces.Box(0, 1, shape=(
-            155 * 5 + 5 + 4 + 4 + 11 + 11 + 1 + 156,), dtype=int)
+            155 * 5 + 5 + 4 + 4 + 11 + 11 + 1 + 1 + 4 + 4 + 156 + 1,), dtype=int)
 
-        # We have 156 actions, corresponding to 155 connects and pass
-        self.action_space = spaces.Discrete(156)
+        # We have 156 actions, corresponding to 155 connects + pass + use power
+        self.action_space = spaces.Discrete(157)
 
         self.game = Game()
 
         self.pass_reward = 0
         self.invalid_reward = 0
+        self.power_reward = 0
 
     def _get_obs(self):
         # connects
@@ -60,8 +61,23 @@ class NextStationLondonEnv(gym.Env):
                 obs_possible_move[self.game.connect_search(
                     self.game.connects, begin, end)] = 1
 
+        # power
+        obs_active_power = self.active_power
+        if self.active_power:
+            obs_power_lst = self.power_lst
+            obs_power = np.zeros(4)
+            obs_power[self.power] = 1
+            obs_power_used = 1 - np.array([self.power_used]).astype(int)
+        else:
+            obs_power_lst = np.zeros(4)
+            obs_power = np.zeros(4)
+            obs_power_used = np.zeros(1)
+        obs_active_power = np.array([obs_active_power]).astype(int)
+
         return np.concatenate([obs_connects, obs_goal, obs_round, obs_color,
-                               obs_card_used, obs_card, obs_is_mid, obs_possible_move]).astype(int)
+                               obs_card_used, obs_card, obs_is_mid,
+                               obs_active_power, obs_power_lst, obs_power,
+                               obs_possible_move, obs_power_used]).astype(int)
 
     def _get_info(self):
         return {
@@ -97,6 +113,14 @@ class NextStationLondonEnv(gym.Env):
         self.trts_total = [9, 16, 19, 36, 49]
         self.cntr_total = [18, 19, 20, 25, 26, 30, 32, 33, 34]
 
+        # init pencil power
+        self.active_power = True
+        # self.active_power = random.choice([True, False])
+        if self.active_power:
+            self.powers = [0, 1, 2, 3]
+            random.shuffle(self.powers)
+            self.power_lst = np.zeros(4)
+
     def new_round_init(self):
         # round start
         self.color = self.colors[self.round]
@@ -116,6 +140,12 @@ class NextStationLondonEnv(gym.Env):
         # init dst
         self.dsts = np.array([0 for _ in range(13)])
         self.dsts[self.game.nodes[self.game.nodes_head[self.color]].dst] += 1
+
+        # init power
+        self.power = self.powers[self.round]
+        self.power_lst[self.power] = 1
+        self.power_used = False
+        self.double_count = 0
 
     def draw_a_card(self):
         self.card_idx = self.card_orders.pop(0)
@@ -182,6 +212,32 @@ class NextStationLondonEnv(gym.Env):
                 observation = self._get_obs()
                 info = self._get_info()
                 return observation, self.pass_reward, False, False, info
+
+        # use power
+        if action == 156:
+            if self.power_used:
+                observation = self._get_obs()
+                info = self._get_info()
+                return observation, self.invalid_reward, False, False, info
+
+            if self.power == 0:
+                self.double_count = 1
+            elif self.power == 1:
+                self.card.sttn = 5
+            elif self.power == 2:
+                self.card.set_is_mid()
+            elif self.power == 3:
+                # simplified action, will only put x2 at the most crowded dst
+                dsts_most = np.random.choice(
+                    np.where(self.dsts == self.dsts.max())[0])
+                self.dsts[dsts_most] += 1
+
+            self.power_used = True
+            self.get_possible_move()
+
+            observation = self._get_obs()
+            info = self._get_info()
+            return observation, self.power_reward, False, False, info
 
         # check if valid
         connect = self.game.connects[action]
@@ -292,6 +348,19 @@ class NextStationLondonEnv(gym.Env):
                 self.river_score, self.dst_score, self.trt_score, self.inter_score, self.goals_score, self.goals_used)
             reward = total_score - self.total_score
             self.total_score = total_score
+
+            if self.double_count == 0:
+                pass
+            elif self.double_count == 1:
+                self.double_count = 0
+                if self.card.sttn == 5:
+                    self.card.sttn = self.game.nodes[end].sttn
+
+                self.get_possible_move()
+
+                observation = self._get_obs()
+                info = self._get_info()
+                return observation, reward, False, False, info
 
             if self.cards.end_num < 5:
                 self.draw_a_card()
