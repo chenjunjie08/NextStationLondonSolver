@@ -231,6 +231,7 @@ class Game():
                                 'round': round,
                                 'color': color,
 
+                                'active_power': active_power,
                                 'power': power,
                                 'power_used': power_used,
                                 'double_count': double_count,
@@ -521,6 +522,7 @@ class Game():
                         'round': round,
                         'color': color,
 
+                        'active_power': active_power,
                         'power': power,
                         'power_used': power_used,
                         'double_count': double_count,
