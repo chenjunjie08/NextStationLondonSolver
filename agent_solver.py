@@ -48,8 +48,23 @@ def game_get_obs(game, situation):
             obs_possible_move[game.connect_search(
                 game.connects, begin, end)] = 1
 
+    # power
+    obs_active_power = situation['active_power']
+    if obs_active_power:
+        obs_power_lst = situation['power_lst']
+        obs_power = np.zeros(4)
+        obs_power[situation['power']] = 1
+        obs_power_used = 1 - np.array([situation['power_used']]).astype(int)
+    else:
+        obs_power_lst = np.zeros(4)
+        obs_power = np.zeros(4)
+        obs_power_used = np.zeros(1)
+    obs_active_power = np.array([obs_active_power]).astype(int)
+
     return np.concatenate([obs_connects, obs_goal, obs_round, obs_color,
-                           obs_card_used, obs_card, obs_is_mid, obs_possible_move]).astype(int)
+                           obs_card_used, obs_card, obs_is_mid,
+                           obs_active_power, obs_power_lst, obs_power,
+                           obs_possible_move, obs_power_used]).astype(int)
 
 
 def agent_solver(agent, obs, game, possible_move):
@@ -58,6 +73,9 @@ def agent_solver(agent, obs, game, possible_move):
 
     if action == 155:
         return 'pass'
+
+    if action == 156:
+        return 'power'
 
     connect = game.connects[action]
     if connect.endpoint[0].id in possible_move:
@@ -74,13 +92,13 @@ def actor(game, situation):
 
 
 if __name__ == '__main__':
-    # agent = PPO_Agent(gym.make("NSL/NextStationLondon-v0"))
-    # agent.load('./checkpoints/PPO_test_1_1702462709.pth')
-    # agent.cuda()
-
-    agent = DQN_Agent(gym.make("NSL/NextStationLondon-v0"))
-    agent.load('./checkpoints/DQN_DQN_1_1702473994.pth')
+    agent = PPO_Agent(gym.make("NSL/NextStationLondon-v0"))
+    agent.load('./checkpoints/PPO_PPO_1_1702894772.pth')
     agent.cuda()
 
+    # agent = DQN_Agent(gym.make("NSL/NextStationLondon-v0"))
+    # agent.load('./checkpoints/DQN_DQN_1_1702473994.pth')
+    # agent.cuda()
+
     game = Game()
-    game.new_game(mode='step', auto_play=True, actor=actor)
+    game.new_game(mode='step', active_power=True, auto_play=True, actor=actor)

@@ -30,7 +30,7 @@ class DQN_Agent(nn.Module):
 
     def get_action_and_value(self, x, action=None):
         q_values = self.network(x.float())
-        q_values = q_values * x[:, -156:].float()
+        q_values = q_values * x[:, -157:].float()
         actions = torch.argmax(q_values, dim=1)
         if q_values.max() == 0:
             actions = torch.zeros_like(actions) + 155

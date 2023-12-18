@@ -236,10 +236,6 @@ class Game():
                                 'color': color,
 
                                 'active_power': active_power,
-                                'power': power,
-                                'power_lst': power_lst,
-                                'power_used': power_used,
-                                'double_count': double_count,
 
                                 'heads': heads,
                                 'nodes': nodes,
@@ -262,6 +258,13 @@ class Game():
                                 'trts_total': trts_total,
                                 'cntr_total': cntr_total,
                             }
+                            if active_power:
+                                situation.update({
+                                    'power': power,
+                                    'power_lst': power_lst,
+                                    'power_used': power_used,
+                                    'double_count': double_count
+                                })
                             action = actor(copy.deepcopy(self),
                                            copy.deepcopy(situation))
                         print(
@@ -530,10 +533,6 @@ class Game():
                         'color': color,
 
                         'active_power': active_power,
-                        'power': power,
-                        'power_lst': power_lst,
-                        'power_used': power_used,
-                        'double_count': double_count,
 
                         'heads': heads,
                         'nodes': nodes,
@@ -556,6 +555,13 @@ class Game():
                         'trts_total': trts_total,
                         'cntr_total': cntr_total,
                     }
+                    if active_power:
+                        situation.update({
+                            'power': power,
+                            'power_lst': power_lst,
+                            'power_used': power_used,
+                            'double_count': double_count
+                        })
                     if is_save:
                         save_data.append(self.save_data(
                             copy.deepcopy(situation)))

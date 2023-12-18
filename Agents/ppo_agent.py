@@ -41,7 +41,7 @@ class PPO_Agent(nn.Module):
 
     def get_action_and_value(self, x, action=None):
         logits = self.actor(x)
-        mask = x[:, -156:]
+        mask = x[:, -157:]
         logits = logits - (1 - mask) * 20
         probs = Categorical(logits=logits)
         if action is None:

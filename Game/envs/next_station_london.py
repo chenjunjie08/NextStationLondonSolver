@@ -23,6 +23,12 @@ class NextStationLondonEnv(gym.Env):
         self.invalid_reward = 0
         self.power_reward = 0
 
+        self.active_power = True
+        # self.active_power = random.choice([True, False])
+
+    def set_active_power(self, active_power):
+        self.active_power = active_power
+
     def _get_obs(self):
         # connects
         obs_connects = np.zeros((155, 5))
@@ -114,8 +120,6 @@ class NextStationLondonEnv(gym.Env):
         self.cntr_total = [18, 19, 20, 25, 26, 30, 32, 33, 34]
 
         # init pencil power
-        self.active_power = True
-        # self.active_power = random.choice([True, False])
         if self.active_power:
             self.powers = [0, 1, 2, 3]
             random.shuffle(self.powers)
@@ -142,9 +146,10 @@ class NextStationLondonEnv(gym.Env):
         self.dsts[self.game.nodes[self.game.nodes_head[self.color]].dst] += 1
 
         # init power
-        self.power = self.powers[self.round]
-        self.power_lst[self.power] = 1
-        self.power_used = False
+        if self.active_power:
+            self.power = self.powers[self.round]
+            self.power_lst[self.power] = 1
+            self.power_used = False
         self.double_count = 0
 
     def draw_a_card(self):
