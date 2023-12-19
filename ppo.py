@@ -1,3 +1,5 @@
+# From https://github.com/vwxyzjn/cleanrl
+
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
 import os
 import random
