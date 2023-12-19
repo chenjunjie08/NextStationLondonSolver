@@ -32,16 +32,16 @@ if __name__ == '__main__':
     np.random.seed(seed)
     torch.manual_seed(seed)
     env = gym.make("NSL/NextStationLondon-v0")
-    env.unwrapped.set_active_power(True)
+    env.unwrapped.set_active_power(False)
 
-    # PPO
-    agent = PPO_Agent(env)
-    agent.load('./checkpoints/PPO_PPO_1_1702993187.pth')
-    agent.cuda()
-
-    # # DQN
-    # agent = DQN_Agent(env)
-    # agent.load('./checkpoints/DQN_DQN_1_1702473994.pth')
+    # # PPO
+    # agent = PPO_Agent(env)
+    # agent.load('./checkpoints/PPO_PPO_1_1702993187.pth')
     # agent.cuda()
+
+    # DQN
+    agent = DQN_Agent(env)
+    agent.load('./checkpoints/DQN_DQN_1_1703009531.pth')
+    agent.cuda()
 
     auto_test(env, agent, 100)

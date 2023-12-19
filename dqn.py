@@ -45,6 +45,8 @@ class Args:
     """whether to upload the saved model to huggingface"""
     hf_entity: str = ""
     """the user or org name of the model repository from the Hugging Face Hub"""
+    ckpt: str = None
+    """continue training"""
 
     # Algorithm specific arguments
     env_id: str = "CartPole-v1"
@@ -109,7 +111,7 @@ class QNetwork(nn.Module):
         q_values = q_values * x[:, -157:]
 
         if q_values.max() == 0:
-            q_values[:, -1] = - q_values[:, -1]
+            q_values[:, -2] = - q_values[:, -2]
         return q_values
 
 
@@ -172,6 +174,9 @@ poetry run pip install "stable_baselines3==2.0.0a1"
     target_network = QNetwork(envs).to(device)
     target_network.load_state_dict(q_network.state_dict())
 
+    if args.ckpt:
+        q_network.load_state_dict(torch.load(args.ckpt)['model_state_dict'])
+
     rb = ReplayBuffer(
         args.buffer_size,
         envs.single_observation_space,
@@ -189,8 +194,10 @@ poetry run pip install "stable_baselines3==2.0.0a1"
             epsilon = linear_schedule(
                 args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
             if random.random() < epsilon:
-                actions = np.array([envs.single_action_space.sample()
-                                    for _ in range(envs.num_envs)])
+                actions = np.array([np.random.choice(np.where(_[-157:] == 1)[0])
+                                    for _ in obs])
+                # actions = np.array([envs.single_action_space.sample()
+                #                     for _ in range(envs.num_envs)])
             else:
                 q_values = q_network(torch.Tensor(obs).to(device))
                 actions = torch.argmax(q_values, dim=1).cpu().numpy()
