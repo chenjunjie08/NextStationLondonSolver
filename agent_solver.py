@@ -101,4 +101,4 @@ if __name__ == '__main__':
     # agent.cuda()
 
     game = Game()
-    game.new_game(mode='step', active_power=True, auto_play=True, actor=actor)
+    game.new_game_gui(active_power=True, auto_play=True, actor=actor)

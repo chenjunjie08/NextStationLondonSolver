@@ -5,6 +5,8 @@ import numpy as np
 import random
 import copy
 from tqdm import tqdm
+from gui import Gui_input
+import time
 import pickle
 import pdb
 
@@ -202,6 +204,350 @@ class Game():
                     card_used.append(card_idx)
                     if card_idx == 0:
                         card_idx = safe_input('Next card is: ')
+                        card_used.append(card_idx)
+                        cards.cards[card_idx].set_is_mid()
+                    card = cards.cards[card_idx]
+                    cards.end_num += int(card.is_red)
+
+                elif mode == 'random':
+                    card_idx = card_orders.pop(0)
+                    card_used.append(card_idx)
+                    if card_idx == 0:
+                        card_idx = card_orders.pop(0)
+                        card_used.append(card_idx)
+                        cards.cards[card_idx].set_is_mid()
+                    card = cards.cards[card_idx]
+                    cards.end_num += int(card.is_red)
+
+                # possible move
+                if card.is_mid:
+                    possible_move = self.possible_move(nodes, nodes, card.sttn)
+                else:
+                    possible_move = self.possible_move(heads, nodes, card.sttn)
+
+                # take action
+                while True:
+                    if auto_play:
+                        if actor is None:
+                            action = self.random_act(possible_move)
+                        else:
+                            situation = {
+                                'goals_used': goals_used,
+
+                                'round': round,
+                                'color': color,
+
+                                'active_power': active_power,
+
+                                'heads': heads,
+                                'nodes': nodes,
+                                'connects': connects,
+                                'dsts': dsts,
+
+                                'card_used': card_used,
+                                'card': card,
+                                'card_idx': card_idx,
+                                'possible_move': possible_move,
+
+                                'total_score': total_score,
+                                'river_score': river_score,
+                                'dst_score': dst_score,
+                                'inter_score': inter_score,
+                                'trt_score': trt_score,
+                                'goals_score': goals_score,
+
+                                'dsts_total': dsts_total,
+                                'trts_total': trts_total,
+                                'cntr_total': cntr_total,
+                            }
+                            if active_power:
+                                situation.update({
+                                    'power': power,
+                                    'power_lst': power_lst,
+                                    'power_used': power_used,
+                                    'double_count': double_count
+                                })
+                            action = actor(copy.deepcopy(self),
+                                           copy.deepcopy(situation))
+                        print(
+                            f"AI: Card is {'0-' if card.is_mid else ''}{card_idx}. I choose {action}. "
+                        )
+                    else:
+                        action = input("Your action: ")
+
+                    if action in ['show', 's']:
+                        self.show(round, color, card, card_used,
+                                  possible_move, nodes, connects, total_score)
+                        continue
+                    if action in ['pass', 'p']:
+                        if double_count == 1:
+                            double_count = 0
+                        break
+
+                    if action == 'power':
+                        if power_used:
+                            print("Power Already Used!\n")
+                            continue
+
+                        if power == 0:
+                            double_count = 1
+                        elif power == 1:
+                            card.sttn = 5
+                        elif power == 2:
+                            card.set_is_mid()
+                        elif power == 3:
+                            # simplified action, will only put x2 at the most crowded dst
+                            dsts_most = np.random.choice(
+                                np.where(dsts == dsts.max())[0])
+                            dsts[dsts_most] += 1
+                            print(f"Dist {dsts_most} has a x2 mark")
+                        else:
+                            print("Invalid power!\n")
+                            continue
+
+                        power_used = True
+                        # possible move
+                        if card.is_mid:
+                            possible_move = self.possible_move(
+                                nodes, nodes, card.sttn)
+                        else:
+                            possible_move = self.possible_move(
+                                heads, nodes, card.sttn)
+                        continue
+
+                    try:
+                        begin, end = action.split('-')
+                        begin = int(begin)
+                        end = int(end)
+                    except:
+                        print("input: show, pass, or xx-xx\n")
+                        continue
+
+                    # check if valid
+                    if begin in possible_move.keys() and end in possible_move[begin]:
+                        pass
+                    else:
+                        print("Move invalid!\n")
+                        continue
+
+                    # modify heads
+                    if len(heads) == 1:
+                        heads.append(end)
+                    elif not begin in heads:
+                        heads.append(end)
+                    else:
+                        for idx, head in enumerate(heads):
+                            if head == begin:
+                                heads[idx] = end
+                                break
+
+                    # modify nodes
+                    nodes.append(end)
+
+                    dsts[self.nodes[end].dst] += 1
+                    dst_score[round] = self.score_dst(dsts)
+                    # goal 1
+                    if goals_score[1] == 0:
+                        dsts_total[self.nodes[end].dst] = 1
+                        if dsts_total.sum() == 13:
+                            goals_score[1] == 1
+
+                    if self.nodes[end].is_trt:
+                        if len(trt_score) > 1:
+                            trt_score = trt_score[1:]
+                        # goal 2
+                        if goals_score[2] == 0:
+                            for idx, val in enumerate(trts_total):
+                                if self.nodes[end].id == val:
+                                    trts_total.pop(idx)
+                                    break
+                            if len(trts_total) == 0:
+                                goals_score[2] = 1
+
+                    # goal 3
+                    if goals_score[3] == 0:
+                        for idx, val in enumerate(cntr_total):
+                            if self.nodes[end].id == val:
+                                cntr_total.pop(idx)
+                                break
+                        if len(cntr_total) == 0:
+                            goals_score[3] = 1
+
+                    self.nodes[end].set_color(color)
+                    if sum(self.nodes[end].color) < 2:
+                        pass
+                    elif sum(self.nodes[end].color) == 2:
+                        inter_score[0] += 1
+                    elif sum(self.nodes[end].color) == 3:
+                        inter_score[0] -= 1
+                        inter_score[1] += 1
+                    elif sum(self.nodes[end].color) == 4:
+                        inter_score[1] -= 1
+                        inter_score[2] += 1
+
+                    if len(nodes) == 2:
+                        if sum(self.nodes[begin].color) < 2:
+                            pass
+                        elif sum(self.nodes[begin].color) == 2:
+                            inter_score[0] += 1
+                        elif sum(self.nodes[begin].color) == 3:
+                            inter_score[0] -= 1
+                            inter_score[1] += 1
+                        elif sum(self.nodes[begin].color) == 4:
+                            inter_score[1] -= 1
+                            inter_score[2] += 1
+
+                    # goal 0
+                    if goals_score[0] == 0 and inter_score.sum() >= 8:
+                        goals_score[0] = 1
+
+                    # modify connects
+                    connect_id = self.connect_search(self.connects, begin, end)
+                    connects.append(connect_id)
+                    if self.connects[connect_id].is_cross_river:
+                        river_score[round] += 1
+                    # goal 4
+                    if goals_score[4] == 0 and river_score.sum() >= 6:
+                        goals_score[4] = 1
+
+                    self.connects[connect_id].set_unavailable()
+                    for idx in range(len(self.connects)):
+                        if idx == connect_id:
+                            continue
+                        if not self.connects[idx].is_available:
+                            continue
+                        if self.connects[connect_id].is_intersect(self.connects[idx]):
+                            self.connects[idx].set_unavailable()
+
+                    total_score = self.score_total(
+                        river_score, dst_score, trt_score, inter_score, goals_score, goals_used)
+                    # print(f"Current score is {total_score}\n")
+
+                    # power: double
+                    if double_count == 0:
+                        pass
+                    elif double_count == 1:
+                        double_count = 0
+                        if card.sttn == 5:
+                            card.sttn = self.nodes[end].sttn
+                        # possible move
+                        if card.is_mid:
+                            possible_move = self.possible_move(
+                                nodes, nodes, card.sttn)
+                        else:
+                            possible_move = self.possible_move(
+                                heads, nodes, card.sttn)
+                        continue
+
+                    break
+
+        # Game over
+        print(f"\nGame end!")
+        print(f"Score: {total_score}")
+        print(
+            f"Goals finished: {', '.join(np.where(goals_score > 0)[0].astype(str))}")
+
+        return total_score
+
+    # gui-input
+    def new_game_gui(self, mode='step', active_power=False, auto_play=False, actor=None):
+        assert mode in ['random', 'fix', 'step']
+
+        # init gui-class
+        gui_input = Gui_input()
+
+        # init game
+        self.__init__()
+
+        # init round
+        round = -1
+
+        # init color
+        if mode == 'random':
+            colors = [0, 1, 2, 3]
+            random.shuffle(colors)
+
+        # init score
+        total_score = 0
+        river_score = np.array([0, 0, 0, 0])
+        dst_score = np.array([0, 0, 0, 0])
+        inter_score = np.array([0, 0, 0])
+        trt_score = np.array([0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25])
+        goals_score = np.array([0, 0, 0, 0, 0])
+        goals_used = np.array([0, 0, 0, 0, 0])
+
+        # init goal-related var
+        dsts_total = np.array([0 for _ in range(13)])
+        trts_total = [9, 16, 19, 36, 49]
+        cntr_total = [18, 19, 20, 25, 26, 30, 32, 33, 34]
+
+        # init power
+        power_lst = np.zeros(4)
+
+        print("Game Start!\n")
+        if mode == 'step':
+            print("Reading goals...")
+            goals = gui_input.get_goals()
+            for goal in goals:
+                goals_used[int(goal)] = 1
+            print(f"Use goal {goals[0]} and {goals[1]}")
+        elif mode == 'random':
+            goals_used[np.random.choice([0, 1, 2, 3, 4], 2, False)] = 1
+
+        while round < 3:
+            round += 1
+            print(f"### Round {round+1} ###")
+
+            # color used in this round
+            if mode == 'step':
+                print("Reading color...")
+                if round == 0:
+                    color = gui_input.get_color()
+                    print(f"Color is {color}")
+                else:
+                    while True:
+                        new_color = gui_input.get_color()
+                        if new_color != color:
+                            color = new_color
+                            print(f"Color is {color}")
+                            break
+                    time.sleep(4)   # make sure new card is fliped
+            elif mode == 'random':
+                color = colors[round]
+
+            # init heads, nodes, and connects
+            heads = [self.nodes_head[color]]
+            nodes = [self.nodes_head[color]]
+            connects = []
+            self.nodes[self.nodes_head[color]].set_color(color)
+
+            # init new cards
+            cards = Cards()
+            card_used = []
+            if mode == 'random':
+                card_orders = [_ for _ in range(11)]
+                random.shuffle(card_orders)
+
+            # init dst
+            dsts = np.array([0 for _ in range(13)])
+            dsts[self.nodes[self.nodes_head[color]].dst] += 1
+
+            # init power
+            if active_power:
+                print("Reading power...")
+                power = gui_input.get_power()
+                print(f"Power is {power}")
+                power_lst[power] = 1
+                power_used = False
+            double_count = 0
+
+            while cards.end_num <= 4:
+                if mode == 'step':
+                    card_idxs = gui_input.get_sttn(card_used)
+                    card_idx = card_idxs[0]
+                    card_used.append(card_idx)
+                    if card_idx == 0:
+                        card_idx = card_idxs[1]
                         card_used.append(card_idx)
                         cards.cards[card_idx].set_is_mid()
                     card = cards.cards[card_idx]
