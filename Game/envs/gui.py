@@ -109,7 +109,7 @@ class Gui_input():
         if len(res) == 1 and res[0] == 0:
             time.sleep(0.5)
             return self.get_sttn(card_used)
-        elif len(res) > 0 and (res[0] not in card_used):
+        elif len(res) > 0 and (res[-1] not in card_used):
             return res
         else:
             time.sleep(0.5)

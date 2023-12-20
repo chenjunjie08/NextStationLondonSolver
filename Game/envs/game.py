@@ -544,6 +544,9 @@ class Game():
             while cards.end_num <= 4:
                 if mode == 'step':
                     card_idxs = gui_input.get_sttn(card_used)
+                    for _ in card_idxs:
+                        if _ in card_used:
+                            continue
                     card_idx = card_idxs[0]
                     card_used.append(card_idx)
                     if card_idx == 0:
